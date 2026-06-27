@@ -108,7 +108,7 @@ class _BackupPageState extends State<BackupPage> {
             onChanged: _key == null ? (v) => setState(() => _workRelated = v) : null,
             title: const Text('Work-related (FIPS)'),
             subtitle: Text(_workRelated
-                ? 'PBKDF2-HMAC-SHA256 — FIPS 140-3 compliant (NIST SP 800-132)'
+                ? 'PBKDF2-HMAC-SHA256 — FIPS-approved KDF (NIST SP 800-132)'
                 : 'Argon2id (RFC 9106) — memory-hard, strongest vs cracking '
                     '(personal default)'),
           ),
