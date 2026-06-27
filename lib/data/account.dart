@@ -18,6 +18,39 @@ import '../core/totp.dart';
 /// issue 16-char base32 secrets, and surface anything weaker as a rejection.
 const int kMinSecretBytes = 10; // 80 bits
 
+// Secret-strength tier thresholds (in bits). We can't raise the *imported*
+// secret's entropy (the service chose it) — so instead we classify and surface
+// it. Tiers track the relevant standards:
+const int kAal2MinBits = 112; // NIST SP 800-63B AAL2 minimum (approved thru 2030)
+const int kFutureProofMinBits = 128; // SP 800-131A: the post-2030 minimum
+const int kRecommendedMinBits = 160; // RFC 4226 recommended secret length
+
+/// Entropy classification of a TOTP shared secret.
+enum SecretStrength {
+  belowAal2, // 80–111 bits — below NIST 800-63B AAL2
+  aal2, //       112–127 bits — meets AAL2 (current minimum)
+  futureProof, // 128–159 bits — meets post-2030 SP 800-131A
+  recommended; // ≥160 bits — RFC 4226 recommended
+
+  /// Short UI label.
+  String get label => switch (this) {
+        SecretStrength.belowAal2 => 'below AAL2',
+        SecretStrength.aal2 => '112-bit',
+        SecretStrength.futureProof => '128-bit',
+        SecretStrength.recommended => '160-bit+',
+      };
+
+  /// Whether to flag this to the user (below the NIST AAL2 line).
+  bool get isWeak => this == SecretStrength.belowAal2;
+
+  static SecretStrength forBits(int bits) {
+    if (bits >= kRecommendedMinBits) return SecretStrength.recommended;
+    if (bits >= kFutureProofMinBits) return SecretStrength.futureProof;
+    if (bits >= kAal2MinBits) return SecretStrength.aal2;
+    return SecretStrength.belowAal2;
+  }
+}
+
 class Account {
   Account._({
     required this.id,
@@ -42,6 +75,12 @@ class Account {
   final TotpParams params;
 
   TotpAlgorithm get algorithm => params.algorithm;
+
+  /// Entropy of the shared secret in bits.
+  int get secretBits => keyBytes().length * 8;
+
+  /// NIST 800-63B / 800-131A strength classification of the secret.
+  SecretStrength get strength => SecretStrength.forBits(secretBits);
 
   /// Decode the secret to raw key bytes for HMAC. Caller owns the lifetime and
   /// should avoid retaining it. Throws nothing the constructor didn't already
