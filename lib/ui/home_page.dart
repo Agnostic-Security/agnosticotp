@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -110,6 +111,15 @@ class _HomePageState extends State<HomePage> {
         ),
         title: const Text('AgnosticOTP'),
         actions: [
+          if (kDebugMode)
+            IconButton(
+              tooltip: 'Load test data (debug)',
+              icon: const Icon(Icons.science_outlined),
+              onPressed: () {
+                widget.state.loadTestDataDebug();
+                _snack('Loaded test accounts (in-memory)');
+              },
+            ),
           IconButton(
             tooltip: 'Lock',
             icon: const Icon(Icons.lock_outline),
@@ -203,6 +213,8 @@ class _CodeTile extends StatelessWidget {
       title: Row(
         children: [
           Expanded(child: Text(title, overflow: TextOverflow.ellipsis)),
+          _StrengthDot(strength: account.strength, bits: account.secretBits),
+          const SizedBox(width: 8),
           _AlgoBadge(algorithm: account.algorithm),
         ],
       ),
@@ -233,24 +245,62 @@ class _CodeTile extends StatelessWidget {
   }
 }
 
+/// Per-account hash-type badge: a distinct icon + colour per algorithm so the
+/// hash is recognisable at a glance.
 class _AlgoBadge extends StatelessWidget {
   const _AlgoBadge({required this.algorithm});
   final TotpAlgorithm algorithm;
 
+  static const Color _amber = Color(0xFFE0A030);
+  static const Color _green = Color(0xFF3FB36B);
+
   @override
   Widget build(BuildContext context) {
-    final legacy = algorithm == TotpAlgorithm.sha1;
     final theme = Theme.of(context);
-    final color = legacy ? theme.colorScheme.error : theme.colorScheme.primary;
+    final (IconData icon, Color color, String label) = switch (algorithm) {
+      TotpAlgorithm.sha1 => (Icons.gpp_maybe, _amber, 'SHA1 · legacy'),
+      TotpAlgorithm.sha256 => (Icons.gpp_good, theme.colorScheme.primary, 'SHA256'),
+      TotpAlgorithm.sha512 => (Icons.verified_user, _green, 'SHA512'),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(
-        legacy ? '${algorithm.wireName} · legacy' : algorithm.wireName,
-        style: theme.textTheme.labelSmall?.copyWith(color: color),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 3),
+          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small coloured dot reflecting the secret's NIST strength tier (tap/hover for
+/// the bit count).
+class _StrengthDot extends StatelessWidget {
+  const _StrengthDot({required this.strength, required this.bits});
+  final SecretStrength strength;
+  final int bits;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (strength) {
+      SecretStrength.belowAal2 => Theme.of(context).colorScheme.error,
+      SecretStrength.aal2 => const Color(0xFFE0A030),
+      SecretStrength.futureProof => Theme.of(context).colorScheme.primary,
+      SecretStrength.recommended => const Color(0xFF3FB36B),
+    };
+    return Tooltip(
+      message: 'Secret strength: ${strength.label} ($bits-bit)',
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }

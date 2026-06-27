@@ -156,6 +156,20 @@ not-a-uri
       expect(r.importedCount, 2);
     });
 
+    test('browser/extension export: CRLF list, mixed algorithms', () {
+      // How most browser password managers / 2FA extensions export: a
+      // newline-separated list of otpauth:// URIs (often CRLF on Windows).
+      final export = [
+        'otpauth://totp/GitHub:a@x?secret=$_seedB32&algorithm=SHA1',
+        'otpauth://totp/AWS:b@x?secret=$_seedB32&algorithm=SHA256',
+        'otpauth://totp/Bank:c@x?secret=$_seedB32&algorithm=SHA512&digits=8',
+      ].join('\r\n');
+      final r = AuthenticatorImport.fromText(export);
+      expect(r.importedCount, 3);
+      expect(r.accounts.map((a) => a.algorithm).toSet(),
+          {TotpAlgorithm.sha1, TotpAlgorithm.sha256, TotpAlgorithm.sha512});
+    });
+
     test('a malformed migration line does not abort the import (C-MED-2)', () {
       // bad migration block (negative varint length) followed by a valid line.
       final bad = <int>[

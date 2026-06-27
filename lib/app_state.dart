@@ -7,9 +7,11 @@
 
 import 'package:flutter/foundation.dart';
 
+import 'core/otpauth_uri.dart';
 import 'core/totp.dart';
 import 'data/account.dart';
 import 'data/secure_store.dart';
+import 'dev/test_accounts.dart';
 
 enum VaultLockState { locked, unlocking, unlocked, unavailable }
 
@@ -53,6 +55,33 @@ class AppState extends ChangeNotifier {
       _error = 'Could not unlock the vault.';
       _lock = VaultLockState.locked;
     }
+    notifyListeners();
+  }
+
+  /// Merge a batch of imported accounts (dedup on id) and persist.
+  Future<void> importAccounts(List<Account> incoming) async {
+    final byId = {for (final a in _accounts) a.id: a};
+    for (final a in incoming) {
+      byId[a.id] = a;
+    }
+    final next = byId.values.toList();
+    await _vault.save(next);
+    _accounts = next;
+    notifyListeners();
+  }
+
+  /// DEBUG ONLY: populate with fake test accounts in memory (NOT persisted, so
+  /// it works even where the hardware-bound vault write is unavailable, e.g. an
+  /// emulator). Tree-shaken out of release builds (guarded by kDebugMode).
+  void loadTestDataDebug() {
+    if (!kDebugMode) return;
+    final accts = <Account>[];
+    for (final uri in kTestOtpauthUris) {
+      try {
+        accts.add(OtpauthUri.parseToAccount(uri));
+      } catch (_) {}
+    }
+    _accounts = accts;
     notifyListeners();
   }
 
