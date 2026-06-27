@@ -7,7 +7,10 @@ import 'package:flutter/services.dart';
 import '../app_state.dart';
 import '../core/totp.dart';
 import '../data/account.dart';
+import 'backup_page.dart';
+import 'import_page.dart';
 import 'manual_entry_page.dart';
+import 'restore_page.dart';
 import 'scan_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -124,6 +127,38 @@ class _HomePageState extends State<HomePage> {
             tooltip: 'Lock',
             icon: const Icon(Icons.lock_outline),
             onPressed: widget.state.lockNow,
+          ),
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              final page = switch (v) {
+                'backup' => BackupPage(state: widget.state),
+                'restore' => RestorePage(state: widget.state),
+                'import' => ImportPage(state: widget.state),
+                _ => null,
+              };
+              if (page != null) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'backup',
+                child: ListTile(
+                    leading: Icon(Icons.cloud_upload_outlined),
+                    title: Text('Encrypted backup')),
+              ),
+              PopupMenuItem(
+                value: 'restore',
+                child: ListTile(
+                    leading: Icon(Icons.restore), title: Text('Restore backup')),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: ListTile(
+                    leading: Icon(Icons.download_outlined),
+                    title: Text('Import accounts')),
+              ),
+            ],
           ),
         ],
       ),
