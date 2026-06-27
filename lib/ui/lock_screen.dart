@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../data/secure_store.dart';
+import 'brand_wordmark.dart';
 import 'theme.dart';
 
 class LockScreen extends StatelessWidget {
@@ -21,14 +22,9 @@ class LockScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                theme.brightness == Brightness.dark
-                    ? AppTheme.logoReversed
-                    : AppTheme.logoPrimary,
-                height: 96,
-              ),
+              Image.asset(AppTheme.logoPrimary, height: 96), // full-colour logo
               const SizedBox(height: 16),
-              Text('AgnosticOTP', style: theme.textTheme.headlineSmall),
+              AppWordmark(style: theme.textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(
                 'SHA256-default authenticator',

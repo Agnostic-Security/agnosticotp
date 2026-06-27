@@ -8,6 +8,7 @@ import '../app_state.dart';
 import '../core/totp.dart';
 import '../data/account.dart';
 import 'backup_page.dart';
+import 'brand_wordmark.dart';
 import 'import_page.dart';
 import 'manual_entry_page.dart';
 import 'restore_page.dart';
@@ -112,7 +113,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(8),
           child: Image.asset('assets/brand/AS_Logo_Reversed_White.png'),
         ),
-        title: const Text('AgnosticOTP'),
+        title: const AppWordmark(),
         actions: [
           if (kDebugMode)
             IconButton(
