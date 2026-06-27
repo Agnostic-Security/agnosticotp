@@ -56,6 +56,13 @@ const int _kArgonParallelism = 1;
 const String _kFormat = 'AgnosticOTP-backup';
 const int _kVersion = 1;
 
+/// Backstop against a trivially-weak USER-TYPED passphrase (pentest B-HIGH-1).
+/// The recommended path is the generated Recovery Key (~128 bits); this only
+/// rejects the obviously-broken cases (too short / too repetitive). It is NOT a
+/// substitute for generating the passphrase.
+const int _kMinPassphraseLength = 12;
+const int _kMinPassphraseDistinct = 6;
+
 class BackupFormatException implements Exception {
   const BackupFormatException(this.message);
   final String message;
@@ -122,8 +129,11 @@ class BackupCodec {
     required String passphrase,
     BackupKdf kdf = BackupKdf.argon2id, // personal default; work => PBKDF2
   }) async {
-    if (passphrase.isEmpty) {
-      throw const BackupFormatException('Passphrase must not be empty.');
+    if (passphrase.length < _kMinPassphraseLength ||
+        passphrase.runes.toSet().length < _kMinPassphraseDistinct) {
+      throw const BackupFormatException(
+          'Passphrase too weak. Use the generated Recovery Key, or at least '
+          '12 characters with real variety.');
     }
     final salt = _randomBytes(_kSaltBytes);
     final key = await _kdfFor(kdf).deriveKeyFromPassword(

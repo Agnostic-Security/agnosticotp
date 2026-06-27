@@ -55,11 +55,17 @@ class AuthenticatorImport {
       final line = rawLine.trim();
       if (line.isEmpty) continue;
       if (line.startsWith('otpauth-migration://')) {
-        final r = fromMigrationUri(line);
-        for (final a in r.accounts) {
-          add(a);
+        // A malformed migration block must NOT abort the whole import (pentest
+        // C-MED-2): record it and keep processing the remaining lines.
+        try {
+          final r = fromMigrationUri(line);
+          for (final a in r.accounts) {
+            add(a);
+          }
+          skipped.addAll(r.skipped);
+        } on OtpauthParseException catch (e) {
+          skipped.add('Skipped a migration block: ${e.message}');
         }
-        skipped.addAll(r.skipped);
       } else if (line.startsWith('otpauth://')) {
         try {
           add(OtpauthUri.parseToAccount(line));
@@ -234,8 +240,12 @@ class _ProtoReader {
 
   Uint8List readLengthDelimited() {
     final len = readVarint();
-    if (_i + len > _b.length) {
-      throw const OtpauthParseException('Truncated migration field.');
+    // A length >= 2^63 wraps to a NEGATIVE Dart int (signed 64-bit). Reject it
+    // up front: a negative `len` would slip past the truncation check below
+    // (since _i + len < _i) and then make sublistView throw an uncaught
+    // RangeError (pentest C-MED-1). Treat it as a controlled parse error.
+    if (len < 0 || _i + len > _b.length) {
+      throw const OtpauthParseException('Malformed migration field length.');
     }
     final out = Uint8List.sublistView(_b, _i, _i + len);
     _i += len;

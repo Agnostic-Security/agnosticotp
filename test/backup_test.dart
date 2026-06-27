@@ -34,7 +34,7 @@ void main() {
     test('PBKDF2 (work)', () async {
       final env = await BackupCodec.encrypt(
           plaintext: vaultJson,
-          passphrase: 'work pass',
+          passphrase: 'work-laptop-backup-2026',
           kdf: BackupKdf.forUsage(workRelated: true));
       expect(BackupCodec.kdfOf(env), BackupKdf.pbkdf2);
       // header records the FIPS KDF + params
@@ -42,7 +42,7 @@ void main() {
       expect(header['kdf'], 'pbkdf2-hmac-sha256');
       expect(header['cipher'], 'aes-256-gcm');
       final out = await BackupCodec.decrypt(
-          envelopeJson: env, passphrase: 'work pass');
+          envelopeJson: env, passphrase: 'work-laptop-backup-2026');
       expect(out, vaultJson);
     });
   });
@@ -50,7 +50,7 @@ void main() {
   group('security properties', () {
     test('wrong passphrase is rejected', () async {
       final env = await BackupCodec.encrypt(
-          plaintext: vaultJson, passphrase: 'right', kdf: BackupKdf.pbkdf2);
+          plaintext: vaultJson, passphrase: 'right-recovery-key-01', kdf: BackupKdf.pbkdf2);
       expect(
         () => BackupCodec.decrypt(envelopeJson: env, passphrase: 'wrong'),
         throwsA(isA<BackupDecryptException>()),
@@ -59,23 +59,27 @@ void main() {
 
     test('tampered ciphertext is rejected (GCM auth)', () async {
       final env = await BackupCodec.encrypt(
-          plaintext: vaultJson, passphrase: 'pw', kdf: BackupKdf.pbkdf2);
+          plaintext: vaultJson, passphrase: 'tamper-test-pass-9x', kdf: BackupKdf.pbkdf2);
       final m = jsonDecode(env) as Map<String, dynamic>;
       final ct = base64.decode(m['ciphertext'] as String);
       ct[0] ^= 0xFF; // flip a byte
       m['ciphertext'] = base64.encode(ct);
       expect(
         () => BackupCodec.decrypt(
-            envelopeJson: jsonEncode(m), passphrase: 'pw'),
+            envelopeJson: jsonEncode(m), passphrase: 'tamper-test-pass-9x'),
         throwsA(isA<BackupDecryptException>()),
       );
     });
 
-    test('empty passphrase refused at encrypt', () async {
-      expect(
-        () => BackupCodec.encrypt(plaintext: vaultJson, passphrase: ''),
-        throwsA(isA<BackupFormatException>()),
-      );
+    test('weak passphrase refused at encrypt (B-HIGH-1)', () async {
+      // empty, single char, too short, and no-variety must all be rejected.
+      for (final weak in ['', 'a', 'short', 'aaaaaaaaaaaa']) {
+        expect(
+          () => BackupCodec.encrypt(plaintext: vaultJson, passphrase: weak),
+          throwsA(isA<BackupFormatException>()),
+          reason: 'should reject "$weak"',
+        );
+      }
     });
 
     test('non-backup input refused', () async {

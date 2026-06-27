@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:agnosticotp/core/migration_import.dart';
+import 'package:agnosticotp/core/otpauth_uri.dart';
 import 'package:agnosticotp/core/totp.dart';
 
 // --- tiny protobuf encoder (mirror of the reader under test) ---
@@ -118,6 +119,19 @@ void main() {
       expect(() => AuthenticatorImport.fromMigrationUri('https://x'),
           throwsA(anything));
     });
+
+    test('malformed varint length is a controlled error, not RangeError (C-MED-1)',
+        () {
+      // field 1 (otp_parameters), wire 2 (0x0a), then a 10-byte length varint
+      // that overflows to Int64.MIN (negative). Must surface as a parse error.
+      final bytes = <int>[
+        0x0a, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01 //
+      ];
+      final uri =
+          'otpauth-migration://offline?data=${Uri.encodeQueryComponent(base64.encode(bytes))}';
+      expect(() => AuthenticatorImport.fromMigrationUri(uri),
+          throwsA(isA<OtpauthParseException>()));
+    });
   });
 
   group('otpauth URI list (browser/extension export)', () {
@@ -140,6 +154,19 @@ not-a-uri
       final r = AuthenticatorImport.fromText(
           'otpauth://totp/A?secret=$_seedB32\n$mig');
       expect(r.importedCount, 2);
+    });
+
+    test('a malformed migration line does not abort the import (C-MED-2)', () {
+      // bad migration block (negative varint length) followed by a valid line.
+      final bad = <int>[
+        0x0a, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01 //
+      ];
+      final badUri =
+          'otpauth-migration://offline?data=${Uri.encodeQueryComponent(base64.encode(bad))}';
+      final r = AuthenticatorImport.fromText(
+          '$badUri\notpauth://totp/Acme:bob?secret=$_seedB32');
+      expect(r.importedCount, 1); // the valid line still imported
+      expect(r.skipped, isNotEmpty); // the bad block recorded, not thrown
     });
   });
 }
