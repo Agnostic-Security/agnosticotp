@@ -1,10 +1,18 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Camera: QR enrolment. Biometric: vault unlock. No INTERNET permission —
-         AgnosticOTP is fully offline; the absence of INTERNET is a hard exfil
-         control (threat model H4: no path for a secret to leave the device). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Camera: QR enrolment. Biometric: vault unlock. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
+    <!-- AgnosticOTP is fully offline: no path for a secret to leave the device
+         (threat model H4). mobile_scanner's Google ML Kit barcode dependency
+         injects INTERNET + ACCESS_NETWORK_STATE via its AAR; strip both from the
+         merged (release) manifest. Barcode scanning uses ML Kit's bundled
+         on-device model, so this does not affect QR reading. (Flutter's debug
+         buildType manifest re-adds INTERNET for hot-reload during development.) -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
 
     <application
         android:label="AgnosticOTP"
