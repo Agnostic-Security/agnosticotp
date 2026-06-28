@@ -64,3 +64,15 @@ flutter build apk --debug                       # Android build
 
 Uses the Agnostic Security palette (Agnostic Blue `#1F5F8E`, Agnostic Orange
 `#EC6B2D`) and shield logo from the brand pack.
+
+## License
+
+Copyright 2026 Agnostic Security Ltd.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this project except in compliance with the License. You may obtain a copy of the
+License in [LICENSE](LICENSE) or at <http://www.apache.org/licenses/LICENSE-2.0>.
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.

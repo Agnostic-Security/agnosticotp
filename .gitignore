@@ -44,3 +44,13 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 android/build/
+
+# Signing material & secrets — never commit (open-source repo)
+*.jks
+*.keystore
+**/key.properties
+*.p12
+*.pfx
+*.pem
+.env
+*.env
